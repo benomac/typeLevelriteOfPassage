@@ -1,0 +1,28 @@
+# Scala stuff
+*.class
+**/target/
+
+secret.env
+secrets.env
+
+.bsp
+
+# IDE
+.idea
+*/.idea
+*.iml
+out
+
+# VS Code
+.vscode
+.metals
+.bloop
+metals.sbt
+
+# MacOS
+.DS_Store
+
+# Misc
+*.log
+
+**/.scala-build

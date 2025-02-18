@@ -11,7 +11,7 @@ import org.http4s.ember.server.EmberServerBuilder
 import pureconfig.ConfigSource
 import com.rockthejvm.jobsboard.config.*
 import com.rockthejvm.jobsboard.config.syntax.*
-import com.rockthejvm.jobsboard.http.HttpApi
+import com.rockthejvm.jobsboard.modules.HttpApi
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 object Application extends IOApp.Simple {

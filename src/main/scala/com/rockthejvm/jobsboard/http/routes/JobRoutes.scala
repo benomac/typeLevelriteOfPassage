@@ -62,25 +62,15 @@ class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends Http4s
 
   // DELETE /jobs/uuid
   private val deleteJobRoute: HttpRoutes[F] = HttpRoutes.of[F] {
-    case req @ DELETE -> Root / UUIDVar(id) =>
-      for {
-        maybeJob <- jobs.find(id)
-        resp <- maybeJob match {
-          case Some(job) => {
-            jobs.delete(id)
-            Ok()
-          }
-          case None => NotFound(FailureResponse(s"Cannot delete job $id: id not found"))
-        }
-      } yield resp
-
-//      jobs.find(id).flatMap {
-//        case Some(job) =>
-//          for {
-//            _ <- jobs.delete(id)
-//            resp <- Ok()
-//          } yield resp
-//        case None => NotFound(FailureResponse(s"Cannot delete job $id: id not found"))
+    case req@DELETE -> Root / UUIDVar(id) =>
+      jobs.find(id).flatMap {
+        case Some(job) =>
+          for {
+            _ <- jobs.delete(id)
+            resp <- Ok()
+          } yield resp
+        case None => NotFound(FailureResponse(s"Cannot delete job $id: id not found"))
+      }
   }
 
   val routes = Router(

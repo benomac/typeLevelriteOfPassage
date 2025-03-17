@@ -17,9 +17,10 @@ import java.util.UUID
 import com.rockthejvm.jobsboard.domain.Job.*
 import com.rockthejvm.jobsboard.algebras.*
 import com.rockthejvm.jobsboard.http.responses.*
+import com.rockthejvm.jobsboard.http.validation.Syntax.*
 import com.rockthejvm.jobsboard.logging.Syntax.*
 
-class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends Http4sDsl[F] {
+class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends HttpValidationDsl[F] {
 
   // POST /jobs?offset=x&limit=y { filters } // TODO add query params and filters later
   private val allJobsRoute: HttpRoutes[F] = HttpRoutes.of[F] { case POST -> Root =>
@@ -38,42 +39,47 @@ class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends Http4s
     }
   }
 
+  // POST /jobs/create { jobInfo }
   private val createJobRoute: HttpRoutes[F] = HttpRoutes.of[F] {
     case req @ POST -> Root / "create" =>
-      for {
-        jobInfo <- req.as[JobInfo].logError(e => s"Parsing payload failed: $e")
-        jobId   <- jobs.create("ben@email.com", jobInfo)
-        resp    <- Created(jobId)
-      } yield resp
+      req.validate[JobInfo] { jobInfo =>
+        for {
+//          jobInfo <- req.as[JobInfo].logError(e => s"Parsing payload failed: $e")
+          jobId <- jobs.create("ben@email.com", jobInfo)
+          resp  <- Created(jobId)
+        } yield resp
+      }
+
   }
 
   // PUT /jobs/uuid { jobInfo }
   private val updateJobRoute: HttpRoutes[F] = HttpRoutes.of[F] {
     case req @ PUT -> Root / UUIDVar(id) =>
-      for {
-        jobInfo     <- req.as[JobInfo]
-        maybeNewJob <- jobs.update(id, jobInfo)
-        resp <- maybeNewJob match { // change to flatMap to test if that works in the same way
-          case Some(job) => Ok()
-          case None      => NotFound(FailureResponse(s"Cannot update job $id: id not found"))
-        }
-      } yield resp
+      req.validate[JobInfo] { jobInfo =>
+        for {
+          maybeNewJob <- jobs.update(id, jobInfo)
+          resp <- maybeNewJob match { // change to flatMap to test if that works in the same way
+            case Some(job) => Ok()
+            case None      => NotFound(FailureResponse(s"Cannot update job $id: id not found"))
+          }
+        } yield resp
+      }
   }
 
   // DELETE /jobs/uuid
   private val deleteJobRoute: HttpRoutes[F] = HttpRoutes.of[F] {
-    case req@DELETE -> Root / UUIDVar(id) =>
+    case req @ DELETE -> Root / UUIDVar(id) =>
       jobs.find(id).flatMap {
         case Some(job) =>
           for {
-            _ <- jobs.delete(id)
+            _    <- jobs.delete(id)
             resp <- Ok()
           } yield resp
         case None => NotFound(FailureResponse(s"Cannot delete job $id: id not found"))
       }
   }
 
-  val routes = Router(
+  val routes: HttpRoutes[F] = Router(
     "/jobs" -> (allJobsRoute <+> findJobRoute <+> createJobRoute <+> updateJobRoute <+> deleteJobRoute)
   )
 }

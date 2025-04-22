@@ -2,9 +2,6 @@ package com.rockthejvm.jobsboard.core
 
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
-import com.rockthejvm.jobsboard.algebras.LiveJobs
-import com.rockthejvm.jobsboard.domain.Job
-import com.rockthejvm.jobsboard.fixtures.JobFixture
 import doobie.ExecutionContexts
 import doobie.postgres.implicits.*
 import doobie.implicits.*
@@ -12,14 +9,24 @@ import doobie.util.fragment
 import doobie.util.transactor.Transactor
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.should.Matchers
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+
+import com.rockthejvm.jobsboard.algebras.LiveJobs
+import com.rockthejvm.jobsboard.domain.job
+import com.rockthejvm.jobsboard.domain.job.*
+import com.rockthejvm.jobsboard.domain.pagination.*
+import com.rockthejvm.jobsboard.fixtures.JobFixture
 
 class JobsSpec
-    extends AsyncFreeSpec
+extends AsyncFreeSpec
     with AsyncIOSpec
     with Matchers
     with DoobieSpec
     with JobFixture {
   override val initScript: String = "sql/jobs.sql"
+
+  given logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
   "Jobs 'algebra'" - {
 
@@ -58,7 +65,7 @@ class JobsSpec
 
     "should create a new job" in {
       transactor.use { xa =>
-        val program: IO[Option[Job.Job]] = for {
+        val program: IO[Option[job.Job]] = for {
           jobs <- LiveJobs[IO](xa)
           retrieved <- jobs.create("ben@rockthejvm.com", RockTheJvmNewJob)
           maybeJob <- jobs.find(retrieved)
@@ -70,7 +77,7 @@ class JobsSpec
 
     "should return an updated job if it exists" in {
       transactor.use { xa =>
-        val program: IO[Option[Job.Job]] = for {
+        val program: IO[Option[job.Job]] = for {
           jobs <- LiveJobs[IO](xa)
           maybeUpdatedJob <- jobs.update(AwesomeJobUuid, UpdatedAwesomeJob.jobInfo)
         } yield maybeUpdatedJob
@@ -81,7 +88,7 @@ class JobsSpec
 
     "should return None when trying to update a job that doesn't exist" in {
       transactor.use { xa =>
-        val program: IO[Option[Job.Job]] = for {
+        val program: IO[Option[job.Job]] = for {
           jobs <- LiveJobs[IO](xa)
           maybeUpdatedJob <- jobs.update(NotFoundJobUuid, UpdatedAwesomeJob.jobInfo)
         } yield maybeUpdatedJob
@@ -114,6 +121,28 @@ class JobsSpec
         } yield numberOfDeletedJobs
 
         program.asserting(_ shouldBe 0)
+      }
+    }
+
+    "should filter remote jobs" in {
+      transactor.use { xa =>
+        val program = for {
+          jobs <- LiveJobs[IO](xa)
+          filteredJobs <- jobs.all(JobFilter(remote = true), Pagination.default)
+        } yield filteredJobs
+
+        program.asserting(_ shouldBe List())
+      }
+    }
+
+    "should filter jobs by tags" in {
+      transactor.use { xa =>
+        val program = for {
+          jobs <- LiveJobs[IO](xa)
+          filteredJobs <- jobs.all(JobFilter(tags = List("scala", "cats", "zio")), Pagination.default)
+        } yield filteredJobs
+
+        program.asserting(_ shouldBe List(AwesomeJob))
       }
     }
 

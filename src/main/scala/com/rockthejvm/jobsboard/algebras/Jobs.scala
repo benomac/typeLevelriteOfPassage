@@ -1,6 +1,5 @@
 package com.rockthejvm.jobsboard.algebras
 
-import com.rockthejvm.jobsboard.domain.Job.*
 import cats.*
 import cats.effect.MonadCancelThrow
 import cats.implicits.*
@@ -9,6 +8,11 @@ import doobie.implicits.*
 import doobie.postgres.implicits.*
 import doobie.util.*
 
+import com.rockthejvm.jobsboard.logging.Syntax.*
+import com.rockthejvm.jobsboard.domain.job.*
+import com.rockthejvm.jobsboard.domain.pagination.*
+import org.typelevel.log4cats.Logger
+
 import java.util.UUID
 
 trait Jobs[F[_]] {
@@ -16,7 +20,8 @@ trait Jobs[F[_]] {
   // "algebra"
   // CRUD
   def create(ownerEmail: String, jobInfo: JobInfo): F[UUID]
-  def all(): F[List[Job]]
+  def all(): F[List[Job]] // TODO fix thoughts on the all() method
+  def all(filter: JobFilter, pagination: Pagination): F[List[Job]]
   def find(id: UUID): F[Option[Job]]
   def update(id: UUID, jobInfo: JobInfo): F[Option[Job]]
   def delete(id: UUID): F[Int]
@@ -43,7 +48,7 @@ trait Jobs[F[_]] {
       active: Boolean,
  */
 
-class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[F] {
+class LiveJobs[F[_]: MonadCancelThrow: Logger] private(xa: Transactor[F]) extends Jobs[F] {
 
   override def create(ownerEmail: String, jobInfo: JobInfo): F[UUID] =
     sql"""
@@ -84,8 +89,7 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
           ${jobInfo.other},
           false
          )
-       """
-      .update
+       """.update
       .withUniqueGeneratedKeys[UUID]("id")
       .transact(xa)
 
@@ -114,6 +118,62 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
       .query[Job]
       .to[List]
       .transact(xa)
+
+  override def all(filter: JobFilter, pagination: Pagination): F[List[Job]] = {
+    val selectFragment: Fragment = {
+      fr"""SELECT
+              id,
+              date,
+              ownerEmail,
+              company,
+              title,
+              description,
+              externalUrl,
+              remote,
+              location,
+              salaryLo,
+              salaryHi,
+              currency,
+              country,
+              tags,
+              image,
+              seniority,
+              other,
+              active
+         """
+    }
+
+    val fromFragment: Fragment = {
+      fr"FROM jobs"
+    }
+
+    val whereFragment: Fragment = {
+      Fragments.whereAndOpt(
+        filter.companies.toNel.map(companies => Fragments.in(fr"company", companies)), // Option["WHERE company in $companies"]
+        filter.locations.toNel.map(locations => Fragments.in(fr"location", locations)),
+        filter.countries.toNel.map(countries => Fragments.in(fr"country", countries)),
+        filter.seniorities.toNel.map(seniorities => Fragments.in(fr"seniority", seniorities)),
+        filter.tags.toNel.map(tags => //intersection between filter.tags and rows tags
+          Fragments.or(tags.toList.map(tag => fr"$tag=any(tags)"): _*)
+        ),
+        filter.maxSalary.map(salary => fr"salaryHi > $salary"),
+        filter.remote.some.map(remote => fr"remote = $remote")
+      )
+    }
+
+    val paginationFragment: Fragment = {
+      fr"ORDER BY id LIMIT ${pagination.limit} OFFSET ${pagination.offset}"
+    }
+
+    val statement = selectFragment |+| fromFragment |+| whereFragment |+| paginationFragment
+
+    Logger[F].info(statement.toString) *>
+    statement
+      .query[Job]
+      .to[List]
+      .transact(xa)
+      .logError(e => s"Failed query: ${e.getMessage}")
+  }
 
   override def find(id: UUID): F[Option[Job]] =
     sql"""SELECT
@@ -159,9 +219,7 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
           seniority = ${jobInfo.seniority},
           other = ${jobInfo.other}
         WHERE id = $id
-       """
-      .update
-      .run
+       """.update.run
       .transact(xa)
       .flatMap(_ => find(id)) // return the updated job
 
@@ -169,9 +227,7 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
     sql"""
          DELETE FROM jobs
          WHERE id = $id
-       """
-      .update
-      .run
+       """.update.run
       .transact(xa)
 }
 
@@ -243,7 +299,7 @@ object LiveJobs {
       )
   }
 
-  def apply[F[_]: MonadCancelThrow](xa: Transactor[F]): F[LiveJobs[F]] = {
+  def apply[F[_]: MonadCancelThrow: Logger](xa: Transactor[F]): F[LiveJobs[F]] = {
     new LiveJobs[F](xa).pure[F]
   }
 }

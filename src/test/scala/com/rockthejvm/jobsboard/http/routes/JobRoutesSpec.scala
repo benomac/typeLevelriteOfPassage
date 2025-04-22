@@ -11,7 +11,8 @@ import org.http4s.implicits.*
 import org.scalatest.matchers.should.Matchers
 import com.rockthejvm.jobsboard.algebras.Jobs
 import com.rockthejvm.jobsboard.algebras.*
-import com.rockthejvm.jobsboard.domain.Job.{Job, JobInfo}
+import com.rockthejvm.jobsboard.domain.pagination.*
+import com.rockthejvm.jobsboard.domain.job.*
 import com.rockthejvm.jobsboard.fixtures.*
 import org.http4s.*
 import org.typelevel.log4cats.Logger
@@ -36,6 +37,10 @@ class JobRoutesSpec
 
     override def all(): IO[List[Job]] =
       IO.pure(List(AwesomeJob))
+
+    override def all(filter: JobFilter, pagination: Pagination): IO[List[Job]] =
+      if(filter.remote) IO.pure(List())
+      else IO.pure(List(AwesomeJob))
 
     override def find(id: UUID): IO[Option[Job]] =
       if (id == AwesomeJobUuid)
@@ -83,11 +88,25 @@ class JobRoutesSpec
       for {
         response <- jobsRoutes.orNotFound.run(
           Request(method = Method.POST, uri = uri"/jobs")
+            .withEntity(JobFilter()) //empty filter
         )
         job <- response.as[List[Job]]
       } yield {
         response.status shouldBe Status.Ok
         job shouldBe List(AwesomeJob)
+      }
+    }
+
+    "should return all jobs that satisfy a filter" in {
+      for {
+        response <- jobsRoutes.orNotFound.run(
+          Request(method = Method.POST, uri = uri"/jobs")
+            .withEntity(JobFilter(remote = true)) 
+        )
+        job <- response.as[List[Job]]
+      } yield {
+        response.status shouldBe Status.Ok
+        job shouldBe List()
       }
     }
 

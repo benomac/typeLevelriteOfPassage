@@ -14,18 +14,24 @@ import org.http4s.dsl.Http4sDsl
 
 import scala.collection.mutable
 import java.util.UUID
-import com.rockthejvm.jobsboard.domain.Job.*
+import com.rockthejvm.jobsboard.domain.job.*
 import com.rockthejvm.jobsboard.algebras.*
+import com.rockthejvm.jobsboard.domain.pagination.Pagination
 import com.rockthejvm.jobsboard.http.responses.*
 import com.rockthejvm.jobsboard.http.validation.Syntax.*
 import com.rockthejvm.jobsboard.logging.Syntax.*
 
 class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends HttpValidationDsl[F] {
 
-  // POST /jobs?offset=x&limit=y { filters } // TODO add query params and filters later
-  private val allJobsRoute: HttpRoutes[F] = HttpRoutes.of[F] { case POST -> Root =>
+  object OffsetQueryParam extends OptionalQueryParamDecoderMatcher[Int]("offset")
+  object LimitQueryParam extends OptionalQueryParamDecoderMatcher[Int]("limit")
+
+  // POST /jobs?limit=x&offset=y { filters } // TODO add query params and filters later
+  private val allJobsRoute: HttpRoutes[F] = HttpRoutes.of[F] {
+    case req @ POST -> Root :? LimitQueryParam(limit) +& OffsetQueryParam(offset) =>
     for {
-      jobsList <- jobs.all()
+      filter <- req.as[JobFilter]
+      jobsList <- jobs.all(filter, Pagination(limit, offset))
       resp     <- Ok(jobsList)
     } yield resp
 

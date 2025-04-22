@@ -12,6 +12,7 @@ import pureconfig.ConfigSource
 import com.rockthejvm.jobsboard.config.*
 import com.rockthejvm.jobsboard.config.syntax.*
 import com.rockthejvm.jobsboard.modules.*
+import org.http4s.server.Server
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 object Application extends IOApp.Simple {
@@ -20,7 +21,7 @@ object Application extends IOApp.Simple {
 
   override def run: IO[Unit] = ConfigSource.default.loadF[IO, AppConfig].flatMap {
     case AppConfig(postgresConfig, emberConfig) =>
-    val appResource = for {
+    val appResource: Resource[IO, Server] = for {
       xa <- Database.makePostgresResource[IO](postgresConfig)
       core    <- Core[IO](xa)
       httpApi <- HttpApi[IO](core)

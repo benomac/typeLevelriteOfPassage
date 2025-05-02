@@ -15,7 +15,7 @@ import org.http4s.dsl.Http4sDsl
 import scala.collection.mutable
 import java.util.UUID
 import com.rockthejvm.jobsboard.domain.job.*
-import com.rockthejvm.jobsboard.algebras.*
+import com.rockthejvm.jobsboard.core.*
 import com.rockthejvm.jobsboard.domain.pagination.Pagination
 import com.rockthejvm.jobsboard.http.responses.*
 import com.rockthejvm.jobsboard.http.validation.Syntax.*

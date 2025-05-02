@@ -12,7 +12,7 @@ import org.scalatest.matchers.should.Matchers
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-import com.rockthejvm.jobsboard.algebras.LiveJobs
+import com.rockthejvm.jobsboard.core.LiveJobs
 import com.rockthejvm.jobsboard.domain.job
 import com.rockthejvm.jobsboard.domain.job.*
 import com.rockthejvm.jobsboard.domain.pagination.*

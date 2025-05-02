@@ -1,4 +1,4 @@
-package com.rockthejvm.jobsboard.algebras
+package com.rockthejvm.jobsboard.core
 
 import cats.*
 import cats.effect.MonadCancelThrow
@@ -227,7 +227,9 @@ class LiveJobs[F[_]: MonadCancelThrow: Logger] private(xa: Transactor[F]) extend
     sql"""
          DELETE FROM jobs
          WHERE id = $id
-       """.update.run
+       """
+      .update
+      .run
       .transact(xa)
 }
 

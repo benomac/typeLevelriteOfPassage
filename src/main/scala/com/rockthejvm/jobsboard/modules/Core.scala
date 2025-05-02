@@ -2,7 +2,7 @@ package com.rockthejvm.jobsboard.modules
 
 import cats.effect.*
 import cats.implicits.*
-import com.rockthejvm.jobsboard.algebras.*
+import com.rockthejvm.jobsboard.core.*
 import doobie.util.transactor.Transactor
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger

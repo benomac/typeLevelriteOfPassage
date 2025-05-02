@@ -1,13 +1,13 @@
 package com.rockthejvm.jobsboard.playground
 
 import cats.effect.*
-import com.rockthejvm.jobsboard.algebras.LiveJobs
+import com.rockthejvm.jobsboard.core.LiveJobs
 import doobie.*
 import doobie.hikari.HikariTransactor
 import doobie.implicits.*
 import doobie.util.*
 import com.rockthejvm.jobsboard.domain.job.*
-import com.rockthejvm.jobsboard.algebras.*
+import com.rockthejvm.jobsboard.core.*
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 

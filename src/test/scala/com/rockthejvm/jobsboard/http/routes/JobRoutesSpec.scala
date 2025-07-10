@@ -9,7 +9,6 @@ import org.scalatest.freespec.AsyncFreeSpec
 import org.http4s.dsl.Http4sDsl
 import org.http4s.implicits.*
 import org.scalatest.matchers.should.Matchers
-import com.rockthejvm.jobsboard.core.Jobs
 import com.rockthejvm.jobsboard.core.*
 import com.rockthejvm.jobsboard.domain.pagination.*
 import com.rockthejvm.jobsboard.domain.job.*

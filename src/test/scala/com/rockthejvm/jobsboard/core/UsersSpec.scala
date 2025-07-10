@@ -23,7 +23,7 @@ class UsersSpec
     with Matchers
     with Inside
     with DoobieSpec
-    with UsersFixture {
+    with UserFixture {
 
   override val initScript: String = "sql/users.sql"
 

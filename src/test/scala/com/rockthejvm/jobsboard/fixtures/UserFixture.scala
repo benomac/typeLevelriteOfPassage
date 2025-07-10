@@ -1,9 +1,9 @@
 package com.rockthejvm.jobsboard.fixtures
 
 import com.rockthejvm.jobsboard.domain.user.Role.{ADMIN, RECRUITER}
-import com.rockthejvm.jobsboard.domain.user.User
+import com.rockthejvm.jobsboard.domain.user.{NewUserInfo, User}
 
-trait UsersFixture {
+trait UserFixture {
   val ben = User(
     email = "ben@rockthejvm.com",
     hashedPassword = "$2a$10$hB2jCMCtBoxthyzV.Q4xAuKdkAJ7Z9ptPhugKCBM8fF3GnkI26eVq", // rockthejvm
@@ -14,6 +14,7 @@ trait UsersFixture {
   )
 
   val benEmail: String = ben.email
+  val benRawPassword: String = "rockthejvm"
 
   val heath = User(
     email = "heath@rockthejvm.com",
@@ -25,6 +26,7 @@ trait UsersFixture {
   )
 
   val heathEmail = heath.email
+  val heathRawPassword = "heathisthebest"
 
   val newUser = User(
     "dawn@rockthejvm.com",
@@ -42,5 +44,21 @@ trait UsersFixture {
     lastName = Some("EMMOTT-MCALLISTER"),
     company = Some("Adobe"),
     role = RECRUITER
+  )
+
+  val newUserben = NewUserInfo(
+    benEmail,
+    benRawPassword,
+    Some("Ben"),
+    Some("Mcallister"),
+    Some("Rock the JVM")
+  )
+
+  val newUserHeath = NewUserInfo(
+    heathEmail,
+    heathRawPassword,
+    Some("Heath"),
+    Some("Emmott-Mcallister"),
+    Some("Rock the JVM")
   )
 }

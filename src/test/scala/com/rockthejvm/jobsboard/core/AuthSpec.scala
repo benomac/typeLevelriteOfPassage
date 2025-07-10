@@ -18,7 +18,7 @@ import com.rockthejvm.jobsboard.fixtures.*
 import tsec.passwordhashers.PasswordHash
 import tsec.passwordhashers.jca.BCrypt
 
-class AuthSpec extends AsyncFreeSpec with AsyncIOSpec with Matchers with UsersFixture {
+class AuthSpec extends AsyncFreeSpec with AsyncIOSpec with Matchers with UserFixture {
 
   given logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
@@ -114,7 +114,7 @@ class AuthSpec extends AsyncFreeSpec with AsyncIOSpec with Matchers with UsersFi
 
       program.asserting {
         case Some(user) =>
-          user.email shouldBe "bob@rockthejvm.com"
+          user.email shouldBe "bob@rockthejvm.com" // these are greyed out, but they are being ran in the test.
           user.firstName shouldBe Some("bob")
           user.lastName shouldBe Some("man")
           user.company shouldBe Some("bob company")

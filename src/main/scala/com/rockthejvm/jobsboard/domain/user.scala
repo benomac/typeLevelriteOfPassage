@@ -1,6 +1,9 @@
 package com.rockthejvm.jobsboard.domain
 
 import doobie.Meta
+import tsec.authorization.{SimpleAuthEnum, AuthGroup}
+
+import scala.language.postfixOps
 
 object user {
 
@@ -28,6 +31,11 @@ object user {
   object Role {
     given MetaRole: Meta[Role] =
       Meta[String].timap[Role](Role.valueOf)(_.toString)
+  }
+  
+  given roleAuthEnum: SimpleAuthEnum[Role, String] with {
+    override val values: AuthGroup[Role] = AuthGroup(Role.ADMIN, Role.RECRUITER)
+    override def getRepr(role: Role): String = role.toString
   }
 
 }

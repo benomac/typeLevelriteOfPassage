@@ -91,7 +91,6 @@ class UsersSpec
         val program = for {
           users     <- LiveUsers[IO](xa)
           maybeUser <- users.update(newUser)
-          _ = println(maybeUser)
         } yield maybeUser
 
         program.asserting(_ shouldBe None)

@@ -52,23 +52,37 @@ class AuthRoutesSpec
       else OptionT.none[IO, User]
     // jwt authenticator
     JWTAuthenticator.unbacked.inBearerToken(
-      1.day, // expiry of tokens
-      None, // max idle time
+      1.day,   // expiry of tokens
+      None,    // max idle time
       idStore, // identity store
-      key // hash key
+      key      // hash key
     )
   }
 
   val mockedAuth: Auth[IO] = new Auth[IO] {
-    // TODO make sure Ben already exists
-    override def login(email: String, password: String): IO[Option[JWTToken]] = ???
+    override def login(email: String, password: String): IO[Option[JWTToken]] =
+      if (email == benEmail && password == benRawPassword)
+        mockedAuthenticator.create(benEmail).map(Some(_))
+      else IO.pure(None)
 
-    override def signUp(newUserInfo: NewUserInfo): IO[Option[User]] = ???
+    override def signUp(newUserInfo: NewUserInfo): IO[Option[User]] =
+      if (newUserInfo.email == heathEmail)
+        IO.pure(Some(heath))
+      else
+        IO.pure(None)
 
     override def changePassword(
-                                 email: String,
-                                 newPasswordInfo: NewPasswordInfo
-                               ): IO[Either[String, Option[User]]] = ???
+        email: String,
+        newPasswordInfo: NewPasswordInfo
+    ): IO[Either[String, Option[User]]] =
+      if (email == benEmail)
+        if (newPasswordInfo.oldPassword == benRawPassword)
+          IO.pure(Right(Some(ben)))
+        else IO.pure(Left("Invalid Password"))
+      else
+        IO.pure(Right(None))
+
+    override def authenticator: Authenticator[IO] = mockedAuthenticator
   }
 
   extension (r: Request[IO])
@@ -106,7 +120,7 @@ class AuthRoutesSpec
         )
       } yield {
         response.status shouldBe Status.Ok
-        response.headers.get(ci"Authorisation") shouldBe defined
+        response.headers.get(ci"Authorization") shouldBe defined
       }
     }
 
@@ -128,7 +142,7 @@ class AuthRoutesSpec
             .withEntity(newUserHeath)
         )
       } yield {
-        response.status shouldBe Status.Ok
+        response.status shouldBe Status.Created
       }
     }
 
@@ -158,7 +172,7 @@ class AuthRoutesSpec
       for {
         jwt <- mockedAuthenticator.create(heathEmail)
         response <- authRoutes.orNotFound.run(
-          Request(method = Method.POST, uri = uri"/auth/password")
+          Request(method = Method.PUT, uri = uri"/auth/users/password")
             .withBearerToken(jwt)
             .withEntity(NewPasswordInfo("rockthejvm", "newpassword"))
         )
@@ -167,11 +181,11 @@ class AuthRoutesSpec
       }
     }
 
-    "should return 403 - forbidden when trying to change password with an incorrect old password" in {
+    "should return 403 - forbidden if old password is incorrect" in {
       for {
         jwt <- mockedAuthenticator.create(benEmail)
         response <- authRoutes.orNotFound.run(
-          Request(method = Method.POST, uri = uri"/auth/password")
+          Request(method = Method.PUT, uri = uri"/auth/users/password")
             .withBearerToken(jwt)
             .withEntity(NewPasswordInfo("rockthejam", "newpassword"))
         )
@@ -183,7 +197,7 @@ class AuthRoutesSpec
     "should return 401 - unauthorized when trying to change password without a jwt" in {
       for {
         response <- authRoutes.orNotFound.run(
-          Request(method = Method.POST, uri = uri"/auth/password")
+          Request(method = Method.PUT, uri = uri"/auth/users/password")
             .withEntity(NewPasswordInfo(benRawPassword, "newpassword"))
         )
       } yield {
@@ -195,7 +209,7 @@ class AuthRoutesSpec
       for {
         jwt <- mockedAuthenticator.create(benEmail)
         response <- authRoutes.orNotFound.run(
-          Request(method = Method.POST, uri = uri"/auth/password")
+          Request(method = Method.PUT, uri = uri"/auth/users/password")
             .withBearerToken(jwt)
             .withEntity(NewPasswordInfo(benRawPassword, "newpassword"))
         )

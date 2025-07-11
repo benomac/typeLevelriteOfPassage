@@ -20,11 +20,13 @@ trait Auth[F[_]] {
       newPasswordInfo: NewPasswordInfo
   ): F[Either[String, Option[User]]]
   // TODO password recovery via email
+
+  def authenticator: Authenticator[F]
 }
 
 class LiveAuth[F[_]: Async: Logger] private (
     users: Users[F],
-    authenticator: Authenticator[F]
+    override val authenticator: Authenticator[F]
 ) extends Auth[F] {
   override def login(email: String, password: String): F[Option[JWTToken]] =
     for {

@@ -1,7 +1,8 @@
 package com.rockthejvm.jobsboard.domain
 
 import com.rockthejvm.jobsboard.domain.user.*
-import tsec.authentication.{AugmentedJWT, JWTAuthenticator}
+import org.http4s.Response
+import tsec.authentication.{AugmentedJWT, JWTAuthenticator, SecuredRequest}
 import tsec.mac.jca.HMACSHA256
 
 object security {
@@ -10,4 +11,6 @@ object security {
   type JWTToken = AugmentedJWT[Crypto, String]
 
   type Authenticator[F[_]] = JWTAuthenticator[F, String, User, Crypto]
+
+  type AuthRoute[F[_]] = PartialFunction[SecuredRequest[F, User, JWTToken], F[Response[F]]]
 }

@@ -5,5 +5,6 @@ import pureconfig.generic.derivation.default.*
 
 case class AppConfig(
     postgresConfig: PostgresConfig,
-    emberConfig: EmberConfig
+    emberConfig: EmberConfig,
+    securityConfig: SecurityConfig
 ) derives ConfigReader
